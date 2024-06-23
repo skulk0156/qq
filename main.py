@@ -5,12 +5,10 @@ import hypermedia.net.UDP;
 import hypermedia.net.*;
 import controlP5.*;
 
-// For live graph
 ControlP5 cp5;
 Chart yawGraph;
 Chart rollGraph;
 Chart pitchGraph;
-// For text
 Textlabel myTextlabelA;
 Textlabel myTemperature;
 Textlabel AccX;
@@ -19,8 +17,8 @@ Textlabel AccZ;
 Textarea consolearea;
 Println console;
 
-UDP udp;  // define the UDP object
-float[] Euler = new float[3]; // Stores incoming angles from the IMU sensor
+UDP udp;
+float[] Euler = new float[3];
 float temperature = 0;
 float accx = 0;
 float accy = 0;
@@ -29,13 +27,13 @@ float calib = 0;
 int marginfromtop = 0;
 
 public void setup() {
-  udp = new UDP(this, 6000); // change the port number here eg:- 5000,6000 etc.
+  udp = new UDP(this, 6000);
   udp.listen(true);
   fullScreen(P3D);
   smooth(8);
   marginfromtop = ((height * 10) / 100);
 
-  lander = loadShape("LanderV1.obj"); //loads 3D model of the lander
+  lander = loadShape("LanderV1.obj");
   lander.scale(1 + (height / 1000));
   cp5 = new ControlP5(this);
   cp5.enableShortcuts();
