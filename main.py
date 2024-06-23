@@ -1,173 +1,96 @@
-import processing.dxf.*;
+from p5 import *
+import socket
+import threading
 
-PShape lander;
-import hypermedia.net.UDP;
-import hypermedia.net.*;
-import controlP5.*;
+# Global variables
+lander = None
+yaw_graph = None
+roll_graph = None
+pitch_graph = None
+temperature = 0
+accx = 0
+accy = 0
+accz = 0
+calib = 0
+Euler = [0, 0, 0]
+marginfromtop = 0
 
-ControlP5 cp5;
-Chart yawGraph;
-Chart rollGraph;
-Chart pitchGraph;
-Textlabel myTextlabelA;
-Textlabel myTemperature;
-Textlabel AccX;
-Textlabel AccY;
-Textlabel AccZ;
-Textarea consolearea;
-Println console;
+# UDP
+UDP_IP = "0.0.0.0"
+UDP_PORT = 6000
 
-UDP udp;
-float[] Euler = new float[3];
-float temperature = 0;
-float accx = 0;
-float accy = 0;
-float accz = 0;
-float calib = 0;
-int marginfromtop = 0;
+def setup():
+    global lander, yaw_graph, roll_graph, pitch_graph, marginfromtop
+    size(800, 600, P3D)
+    marginfromtop = ((height * 10) / 100)
+    
+    # Load 3D model (this will depend on the format; here we use a placeholder)
+    lander = load_shape("LanderV1.obj")  # Replace with actual method to load 3D model
+    
+    # Setup graphs and text labels
+    setup_graphs()
+    setup_text_labels()
+    
+    # Setup UDP
+    threading.Thread(target=udp_listener).start()
 
-public void setup() {
-  udp = new UDP(this, 6000);
-  udp.listen(true);
-  fullScreen(P3D);
-  smooth(8);
-  marginfromtop = ((height * 10) / 100);
+def setup_graphs():
+    global yaw_graph, roll_graph, pitch_graph
+    yaw_graph = create_graph("YAW", 50, marginfromtop)
+    roll_graph = create_graph("ROLL", 50, marginfromtop + ((height * 10) / 100) + 20)
+    pitch_graph = create_graph("PITCH", 50, marginfromtop + ((height * 10) / 100) * 2 + 40)
 
-  lander = loadShape("LanderV1.obj");
-  lander.scale(1 + (height / 1000));
-  cp5 = new ControlP5(this);
-  cp5.enableShortcuts();
-  // Creates live graph for yaw axis
-  yawGraph = cp5.addChart("YAW")
-    .setPosition(50, marginfromtop)
-    .setSize((width * 20) / 100, (height * 10) / 100)
-    .setRange(-90, 90)
-    .setView(Chart.LINE)
-    .setStrokeWeight(2)
-    .setColorCaptionLabel(color(255,00,00))
-    .setColorBackground(color(255, 255, 255));
-  yawGraph.addDataSet("incoming");
-  yawGraph.setData("incoming", new float[100]);
-  // Creates live graph for roll axis
-  rollGraph = cp5.addChart("ROLL")
-    .setPosition(50, marginfromtop + ((height * 10) / 100) + 20)
-    .setSize((width * 20) / 100, (height * 10) / 100)
-    .setRange(-90, 90)
-    .setView(Chart.LINE)
-    .setStrokeWeight(2)
-    .setColorCaptionLabel(color(255, 00, 00))
-    .setColorBackground(color(255, 255, 255))
-    .setColorActive(color(255, 0, 0));
-  rollGraph.addDataSet("incoming");
-  rollGraph.setData("incoming", new float[100]);
-  // Creates live graph for pitch axis
-  pitchGraph = cp5.addChart("PITCH")
-    .setPosition(50, marginfromtop + ((height * 10) / 100) * 2 + 40)
-    .setSize((width * 20) / 100, (height * 10) / 100)
-    .setRange(-90, 90)
-    .setView(Chart.LINE)
-    .setStrokeWeight(6)
-    .setColorCaptionLabel(color(255,00,00))
-    .setColorBackground(color(255, 255, 255));
-  pitchGraph.addDataSet("incoming");
-  pitchGraph.setData("incoming", new float[100]);
+def create_graph(label, x, y):
+    graph = {}  # Placeholder for graph creation
+    # Add necessary setup for your graph
+    return graph
 
-  myTextlabelA = cp5.addTextlabel("label")
-    .setText("OPTIMUS")
-    .setPosition(10, 10)
-    .setColorValue(color(255, 0, 0))
-    .setFont(createFont("Lucida Console", 20))
-    .setColorBackground(color(152, 190, 100))
-    .setColorForeground(color(204, 193, 145));
+def setup_text_labels():
+    global my_text_label_a, my_temperature, acc_x, acc_y, acc_z, console_area
+    my_text_label_a = create_text_label("OPTIMUS", 10, 10, 20)
+    my_temperature = create_text_label("Temperature", width - ((width * 25) / 100), height - (((height * 20) / 100)), 18)
+    acc_x = create_text_label("Acceleration X", width - ((width * 25) / 100), height - (((height * 20) / 100) + 20), 18)
+    acc_y = create_text_label("Acceleration Y", width - ((width * 25) / 100), height - (((height * 20) / 100) + 40), 18)
+    acc_z = create_text_label("Acceleration Z", width - ((width * 25) / 100), height - (((height * 20) / 100) + 60), 18)
+    console_area = create_text_label("", 50, height - 150, 12)
 
-  myTemperature = cp5.addTextlabel("Temperature")
-    .setPosition(width - ((width * 25) / 100), height - (((height * 20) / 100)))
-    .setColorValue(color(255, 0, 0))
-    .setFont(createFont("Lucida Console", 18))
-    .setColorBackground(color(152, 190, 100))
-    .setColorForeground(color(204, 193, 145));
+def create_text_label(text, x, y, font_size):
+    label = {}  # Placeholder for text label creation
+    # Add necessary setup for your text label
+    return label
 
-  AccX = cp5.addTextlabel("Acceleration X")
-    .setPosition(width - ((width * 25) / 100), height - (((height * 20) / 100) + 20))
-    .setColorValue(color(255, 0, 0))
-    .setFont(createFont("Lucida Console", 18))
-    .setColorBackground(color(152, 190, 100))
-    .setColorForeground(color(204, 193, 145));
+def draw():
+    hint(ENABLE_DEPTH_TEST)
+    push_matrix()
+    background(0)
+    fill(0)
+    ambient_light(128, 128, 128)
+    directional_light(128, 128, 128, 0, 0, -1)
+    translate(10 * width / 21, 2 * height / 5, 250)
+    rotate_x(-Euler[2] * PI / 180)
+    rotate_z(Euler[0] * PI / 180 + calib * PI / 180)
+    rotate_y(Euler[1] * PI / 180)
+    shape(lander)
+    yaw_graph["data"].append(Euler[1])
+    roll_graph["data"].append(Euler[0])
+    pitch_graph["data"].append(Euler[2])
+    pop_matrix()
+    hint(DISABLE_DEPTH_TEST)
 
-  AccY = cp5.addTextlabel("Acceleration Y")
-    .setPosition(width - ((width * 25) / 100), height - (((height * 20) / 100) + 40))
-    .setColorValue(color(255, 0, 0))
-    .setFont(createFont("Lucida Console", 18))
-    .setColorBackground(color(152, 190, 100))
-    .setColorForeground(color(204, 193, 145));
+def udp_listener():
+    global temperature, accx, accy, accz, Euler
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((UDP_IP, UDP_PORT))
 
-  AccZ = cp5.addTextlabel("Acceleration Z")
-    .setPosition(width - ((width * 25) / 100), height - (((height * 20) / 100) + 60))
-    .setColorValue(color(255, 0, 0))
-    .setFont(createFont("Lucida Console", 18))
-    .setColorBackground(color(152, 190, 100))
-    .setColorForeground(color(204, 193, 145));
-
-  consolearea = cp5.addTextarea("console")
-    .setPosition(50, height - 150)
-    .setSize((width * 40) / 100, (height * 10) / 100)
-    .setFont(createFont("Lucida Console", 12))
-    .setLineHeight(14)
-    .setColor(color(128))
-    .setColorBackground(color(255, 100))
-    .setColorForeground(color(255, 100));
-
-  console = cp5.addConsole(consolearea);
-}
-
-void draw() {
-  hint(ENABLE_DEPTH_TEST);
-  pushMatrix();
-  //---------------------
-  background(000, 000, 000);
-  rect(0, 0, 220, 40, 0, 10, 10, 0);
-  fill(0);
-  ambientLight(128, 128, 128);
-
-  directionalLight(128, 128, 128, 0, 0, -1);
-
-  translate(10*width / 21 ,2* height /5, 250);  // Adjust the second parameter to move higher or lower
-  rotateX(-Euler[2] * 3.14 / 180);
-  rotateZ(Euler[0] * 3.14 / 180 + calib * 3.14 / 180);
-  rotateY(Euler[1] * 3.14 / 180);
-  shape(lander);
-  yawGraph.push("incoming", Euler[1]);
-  rollGraph.push("incoming", Euler[0]);
-  pitchGraph.push("incoming", Euler[2]);
-  //---------------------
-  popMatrix();
-  hint(DISABLE_DEPTH_TEST);
-}
-
-
-void receive(byte[] data, String ip, int port) {
-  data = subset(data, 0, data.length);
-  String message = new String(data);
-  String[] list = split(message, ',');
-
-  temperature = int(list[3]);
-  accx = Float.parseFloat(list[0]);
-  accy = Float.parseFloat(list[1]);
-  accz = Float.parseFloat(list[2]);
-  myTemperature.setText("Temperature:-" + temperature);
-  AccX.setText("Acceleration X:- " + int(accx * 10) + "m/s");
-  AccY.setText("Acceleration Y:- " + int(accy * 10) + "m/s");
-  AccZ.setText("Acceleration Z:- " + int(accz * 10) + "m/s");
-
-  Euler[0] = Float.parseFloat(list[4]);
-  Euler[1] = Float.parseFloat(list[5]);
-  Euler[2] = Float.parseFloat(list[6]);
-
-  println("From: " + ip + "  on port: " + port);
-  println("Calibration: " + calib);
-  println("Incoming: " + message);
-}
-
-void mousePressed() {
-  calib = Euler[0];
-}
+    while True:
+        data, addr = sock.recvfrom(1024)
+        message = data.decode("utf-8")
+        list_data = message.split(',')
+        
+        temperature = int(list_data[3])
+        accx = float(list_data[0])
+        accy = float(list_data[1])
+        accz = float(list_data[2])
+        
+        my_temperature["text"] = f"Temperature: {temperature}"
+        acc
