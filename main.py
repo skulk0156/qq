@@ -1,3 +1,5 @@
+!pip install p5 pyp5js python-osc pyglet
+
 from p5 import *
 import socket
 import threading
