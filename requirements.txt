@@ -1,4 +1,4 @@
-p5
+p5==0.5.0
 pyp5js
 python-osc
 pyglet
