@@ -1,1 +1,1 @@
-pip install p5 pyp5js python-osc
+pip install p5 pyp5js python-osc pyglet
